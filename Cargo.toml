@@ -1,0 +1,10 @@
+[workspace]
+
+resolver = "2"
+
+members = [ 
+    "task0",
+    "task1",
+    "task2",
+    "task3",
+]

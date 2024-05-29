@@ -1,0 +1,145 @@
+import { Button, VerticalBox, HorizontalBox } from "std-widgets.slint";
+
+struct CalcState {
+    current-value: int,
+    last-value: int,
+    operator: string,
+    computed: bool
+}
+
+export component Calculator {
+    function get-state() -> CalcState{ { current-value: 0, last-value: 0, operator: "", computed: true } }
+    property <CalcState> state: get-state();
+    property <[[string]]> buttons: [
+        ["1", "2", "3", "+"],
+        ["4", "5", "6", "-"],
+        ["7", "8", "9", "×"],
+        ["C", "0", "÷", "="]
+    ];
+
+    callback value-computed;
+    callback state-cleared();
+    callback operator-pressed(string);
+    callback number-pressed(int);
+    
+    operator-pressed(operator) => {
+        if (state.computed) {
+            state.last-value = state.current-value;
+            state.current-value = 0;
+            state.computed = false;
+        } else if (state.operator == "") {
+            state.last-value = state.current-value;
+            state.current-value = 0;
+        }
+        state.operator = operator;
+    }
+
+    state-cleared => {
+        state = get-state();
+    }
+
+    number-pressed(number) => {
+        if (state.computed) {
+            state.last-value = 0;
+            state.operator = "";
+        }
+
+        state.current-value = state.current-value * 10 + number;
+    }
+    value-computed() => {
+        state.computed = true;
+
+        if (state.operator == "+") {
+            state.current-value = state.last-value + state.current-value;
+        } else if (state.operator == "-") {
+            state.current-value = state.last-value - state.current-value;
+        } else if (state.operator == "×") {
+            state.current-value = state.last-value * state.current-value;
+        } else if (state.current-value != 0) {
+            state.current-value = state.last-value / state.current-value;
+        }
+
+        state.last-value = 0;
+        state.operator = "";
+    }
+
+    function route-actions(action: string) {
+        if action == "=" {
+            value-computed();
+        } else {
+            state-cleared();
+        }
+    }
+
+    function button-pressed(button: string) {
+        if (is-operator(button)) {
+            operator-pressed(button);
+        } else if (is-action(button)) {
+            route-actions(button);
+        } else {
+            number-pressed(button.to-float());
+        }
+    }
+
+    VerticalBox {
+        VerticalBox {
+            Text {
+                text: "\{state.last-value} \{state.operator}";
+                font-size: 30px;
+                opacity: 0;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+
+                states [
+                    visible when !state.computed : {
+                        opacity: 1;
+                        in {
+                            animate opacity { duration: 120ms; }
+                        }
+                        out {
+                            animate opacity { duration: 60ms; }
+                        }
+                    }
+                ]
+            }
+            Text {
+                text: state.current-value;
+                font-size: 60px;
+                horizontal-alignment: right;
+                vertical-alignment: center;
+            }
+        }
+
+        for row in root.buttons: HorizontalBox {
+            for button in row: btn := Button {
+                width: 62px;
+                text: button;
+                clicked => { button-pressed(btn.text) }
+            }
+        }
+    }
+
+    pure function is-operator(button: string) -> bool {
+        button == "+" 
+        || button == "-" 
+        || button == "×" 
+        || button == "÷"
+    }
+
+    pure function is-action(button: string) -> bool {
+        button == "=" || button == "C"
+    }
+}
+
+
+export component AppWindow inherits Window {
+    width: 300px;
+    height: 500px;
+    title: "Калькулятор";
+    default-font-size: 20px;
+    
+    Calculator {
+        width: parent.width;
+        height: parent.height;
+    }
+}
